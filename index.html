@@ -1,0 +1,766 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>給食しごとゲーム</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Mochiy+Pop+One&family=Zen+Maru+Gothic:wght@500;700;900&display=swap">
+<style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#fff;color:#000}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style>
+<style>
+/* Layout: one screen — conveyor(s) + hand pile on top, order slip, crate, thumb buttons at the bottom */
+:root{
+  --bg:#e9eef0; --panel:#ffffff; --line:#c9d3d7; --fg:#1c2a31; --muted:#5d6f77;
+  --crate:#1f7f86; --crate-dark:#16646a; --slip:#fffbe8; --accent:#f0a400;
+  --ok:#2e8b4a; --ng:#d2462f; --plate:#ffffff; --plate-rim:#cfd8dc;
+  --bowl:#f3e4bd; --bowl-rim:#b9995a; --bowl-in:#e2cc94; --bowl-btn:#8a6a2c;
+  --belt:#3a464c; --belt-line:#55636a; --steel:#d5dde0;
+  --tray:#b5d95a; --tray-edge:#86b02f; --stain1:#c23a22; --stain2:#b8661a; --stain3:#6b3d1c;
+  --display:"Mochiy Pop One","Hiragino Maru Gothic ProN","Zen Maru Gothic",sans-serif;
+  --body:"Zen Maru Gothic","Hiragino Maru Gothic ProN","Hiragino Sans","Meiryo",sans-serif;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#12181b;--panel:#1b2428;--line:#2f3c42;--fg:#e8eef0;--muted:#97a8af;
+  --crate:#2a9aa2;--crate-dark:#1d7279;--slip:#2a2817;--accent:#ffbf2e;
+  --ok:#55c27a;--ng:#ff6b52;--plate:#f4f6f7;--plate-rim:#9fb0b6;
+  --bowl:#efdcae;--bowl-rim:#a88a4c;--bowl-in:#d8bf82;--bowl-btn:#d9b56a;
+  --belt:#0b1012;--belt-line:#26323a;--steel:#26313a;--tray:#a6c955;--tray-edge:#75992b;--stain1:#b83a24;--stain2:#a85f1a;--stain3:#5e3518;color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#12181b;--panel:#1b2428;--line:#2f3c42;--fg:#e8eef0;--muted:#97a8af;
+  --crate:#2a9aa2;--crate-dark:#1d7279;--slip:#2a2817;--accent:#ffbf2e;
+  --ok:#55c27a;--ng:#ff6b52;--plate:#f4f6f7;--plate-rim:#9fb0b6;
+  --bowl:#efdcae;--bowl-rim:#a88a4c;--bowl-in:#d8bf82;--bowl-btn:#d9b56a;
+  --belt:#0b1012;--belt-line:#26323a;--steel:#26313a;--tray:#a6c955;--tray-edge:#75992b;--stain1:#b83a24;--stain2:#a85f1a;--stain3:#5e3518;color-scheme:dark}
+
+html,body{height:100%}
+body{background:var(--bg);color:var(--fg);font-family:var(--body);font-weight:500;
+  -webkit-tap-highlight-color:transparent;user-select:none;-webkit-user-select:none}
+.wrap{max-width:560px;margin:0 auto;min-height:100%;display:flex;flex-direction:column;gap:10px;
+  padding-block:12px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));box-sizing:border-box}
+h1{font-family:var(--display);font-weight:400;font-size:1.9rem;margin:0;letter-spacing:.02em;text-wrap:balance}
+h1 span{color:var(--crate)}
+.sub{color:var(--muted);margin:0;line-height:1.7}
+button{font-family:var(--body);font-weight:900;cursor:pointer;border:0;color:inherit}
+button:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
+button:disabled{opacity:.4;cursor:default}
+.num{font-variant-numeric:tabular-nums}
+
+/* start */
+.seg{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:5px}
+.seg button{background:transparent;border-radius:10px;padding:10px 4px;font-size:.95rem;display:flex;flex-direction:column;align-items:center;gap:4px}
+.seg button[aria-pressed="true"]{background:var(--fg);color:var(--bg)}
+.seg .ico{display:flex;gap:3px}
+.seg .ico .plate,.seg .ico .bowl{width:18px}
+.levels{display:grid;gap:10px}
+.lv{display:grid;grid-template-columns:auto 1fr;gap:4px 14px;align-items:center;text-align:left;
+  background:var(--panel);border:2px solid var(--line);border-radius:14px;padding:14px 16px}
+.lv:hover{border-color:var(--crate)}
+.lv b{grid-row:span 2;font-family:var(--display);font-weight:400;font-size:1.05rem;color:#fff;background:var(--crate);
+  border-radius:10px;padding:10px 12px;min-width:5.2em;text-align:center}
+.lv.hard b{background:var(--ng)} .lv.mid b{background:var(--accent);color:#2a1d00}
+.lv small{color:var(--muted);font-weight:500;line-height:1.5}
+.best{color:var(--muted);font-size:.85rem}
+.rules{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:12px 16px;margin:0;line-height:1.8;font-size:.9rem}
+.rules li{margin-left:-.6em}
+.lead{font-weight:900;font-size:.85rem;color:var(--muted);margin:2px 0 -4px}
+
+/* hud */
+.hud{display:flex;justify-content:space-between;align-items:center;gap:6px;font-weight:700;color:var(--muted);font-size:.85rem;flex-wrap:wrap}
+.pills{display:flex;gap:6px;flex-wrap:wrap}
+.pill{background:var(--panel);border:1px solid var(--line);border-radius:999px;padding:3px 10px}
+.pill em{font-style:normal;color:var(--fg)}
+.miss i{font-style:normal;color:var(--ng)}
+
+/* conveyor + pile */
+.lines{display:grid;gap:8px}
+.lines.two{grid-template-columns:1fr 1fr}
+.line{background:var(--steel);border-radius:12px;padding:8px;display:grid;gap:6px;min-width:0}
+.belt{position:relative;height:34px;border-radius:6px;overflow:hidden;
+  background:repeating-linear-gradient(90deg,var(--belt) 0 14px,var(--belt-line) 14px 16px);
+  background-size:16px 100%;animation:belt .5s linear infinite}
+@keyframes belt{to{background-position:16px 0}}
+.belt .lbl{position:absolute;left:6px;top:2px;font-size:.62rem;color:#fff;opacity:.75;letter-spacing:.1em;z-index:1}
+.incoming{position:absolute;top:5px;left:0;will-change:transform}
+.pilebox{display:flex;align-items:flex-end;gap:4px;height:64px;padding:0 2px;border-bottom:3px solid var(--line);position:relative;overflow:hidden}
+.pilebox .lbl{position:absolute;right:4px;top:0;font-size:.7rem;color:var(--muted);font-weight:900}
+.stack{width:30px;border-radius:3px 3px 2px 2px;flex:none;
+  background:repeating-linear-gradient(0deg,var(--plate) 0 1.4px,var(--plate-rim) 1.4px 2px);box-shadow:0 0 0 1px var(--plate-rim)}
+.stack.b{border-radius:8px 8px 4px 4px;background:repeating-linear-gradient(0deg,var(--bowl) 0 1.3px,var(--bowl-rim) 1.3px 2px);box-shadow:0 0 0 1px var(--bowl-rim)}
+.lines.two .stack{width:19px}
+.gauge{height:8px;border-radius:99px;background:var(--panel);overflow:hidden;border:1px solid var(--line)}
+.gauge div{height:100%;background:var(--ok);transition:width .2s,background .2s}
+.gauge.warn div{background:var(--accent)} .gauge.danger div{background:var(--ng)}
+.line.danger,.washer.danger{animation:shake .25s linear infinite}
+@keyframes shake{25%{transform:translateX(-1px)}75%{transform:translateX(1px)}}
+
+/* slip */
+.slip{background:var(--slip);border:1px solid var(--line);border-radius:6px;padding:10px 14px 8px;box-shadow:0 2px 0 var(--line);
+  display:flex;align-items:center;gap:14px;position:relative}
+.slip::before{content:"配膳票";position:absolute;top:-9px;left:10px;font-size:.66rem;letter-spacing:.15em;
+  background:var(--accent);color:#2a1d00;padding:1px 8px;border-radius:4px;font-weight:900}
+.slip .cls{font-family:var(--display);font-size:1.5rem;white-space:nowrap}
+.slip table{flex:1;border-collapse:collapse;font-size:.95rem}
+.slip td{padding:2px 0;border-bottom:1px dashed var(--line)}
+.slip tr:last-child td{border-bottom:0}
+.slip td:last-child{text-align:right;font-weight:900}
+.slip tr.need td{color:var(--crate);font-size:1.05rem}
+.minus{color:var(--ng)} .plus{color:var(--ok)}
+
+/* crate */
+.crate{position:relative;background:var(--crate);border-radius:14px;padding:10px;min-height:90px;
+  box-shadow:inset 0 -6px 0 var(--crate-dark);flex:1;display:grid;gap:10px;align-content:start}
+.crate.two{grid-template-columns:1fr 1fr}
+.crate::after{content:"";position:absolute;inset:8px;border-radius:10px;pointer-events:none;
+  background:repeating-linear-gradient(90deg,transparent 0 22px,rgba(0,0,0,.08) 22px 26px)}
+.compart{position:relative;z-index:1;min-width:0}
+.compart .label{color:#fff;font-weight:900;font-size:.8rem;margin-bottom:5px}
+.items{display:grid;grid-template-columns:repeat(12,minmax(0,24px));gap:3px;align-content:start}
+.crate.two .items{grid-template-columns:repeat(6,minmax(0,20px))}
+.crate.two .items.b{grid-template-columns:repeat(9,minmax(0,16px));gap:2px}
+.plate,.bowl{aspect-ratio:1;max-width:100%;border-radius:50%;box-shadow:0 2px 0 rgba(0,0,0,.25)}
+.plate{background:radial-gradient(circle,var(--plate) 0 48%,var(--plate-rim) 50% 56%,var(--plate) 58%)}
+.bowl{background:radial-gradient(circle,var(--bowl-in) 0 34%,var(--bowl) 44% 66%,var(--bowl-rim) 68% 74%,var(--bowl) 76%)}
+.new{animation:drop .18s ease-out}
+.messy>div{transform:translate(var(--dx),var(--dy)) rotate(var(--r))}
+@keyframes drop{from{transform:translateY(-14px) scale(1.15);opacity:.3}}
+
+/* controls */
+.controls{display:grid;gap:8px;position:sticky;bottom:0;z-index:5;background:var(--bg);margin-top:auto;
+  padding-block:8px calc(4px + env(safe-area-inset-bottom,0px));box-shadow:0 -8px 12px -8px rgba(0,0,0,.18)}
+.controls.two{grid-template-columns:1fr 1fr}
+.grp{display:grid;grid-template-columns:2fr 1fr 1fr;gap:6px;min-width:0}
+.grp .cap{grid-column:1/-1;font-size:.75rem;font-weight:900;color:var(--muted);display:flex;align-items:center;gap:6px}
+.grp .cap .plate,.grp .cap .bowl{width:14px}
+.btn{border-radius:14px;padding:13px 2px;font-size:1.05rem;background:var(--panel);border:2px solid var(--line);
+  box-shadow:0 4px 0 var(--line);transition:transform .05s;touch-action:manipulation;min-width:0}
+.btn:active:not(:disabled){transform:translateY(3px);box-shadow:0 1px 0 var(--line)}
+.btn small{display:block;font-weight:500;font-size:.62rem;opacity:.75}
+.btn.take{background:var(--fg);color:var(--bg);border-color:var(--fg);box-shadow:0 4px 0 var(--muted);font-size:1.35rem}
+.grp.b .btn.take{background:var(--bowl-btn);border-color:var(--bowl-btn);color:#fff}
+.controls.two .btn{font-size:.95rem;padding:12px 0}
+.controls.two .btn.take{font-size:1.2rem}
+.btn.go{background:var(--accent);color:#2a1d00;border-color:var(--accent);font-size:1.2rem;box-shadow:0 4px 0 #b37a00}
+.gofull{grid-column:1/-1}
+
+.toast{position:fixed;left:50%;top:42%;transform:translate(-50%,-50%) scale(.9);z-index:20;
+  background:var(--panel);border:3px solid var(--fg);border-radius:18px;padding:14px 24px;text-align:center;
+  font-weight:900;box-shadow:0 10px 30px rgba(0,0,0,.25);opacity:0;pointer-events:none;transition:.15s;max-width:86vw}
+.toast.show{opacity:1;transform:translate(-50%,-50%) scale(1)}
+.toast .big{font-family:var(--display);font-weight:400;font-size:1.8rem;display:block}
+.toast.ok{border-color:var(--ok)} .toast.ok .big{color:var(--ok)}
+.toast.ng{border-color:var(--ng)} .toast.ng .big{color:var(--ng)}
+
+/* result */
+.card{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:18px}
+.over{font-family:var(--display);font-size:1.9rem;color:var(--ng);margin:2px 0}
+.rank{font-family:var(--display);font-size:1.3rem;color:var(--crate)}
+.stats{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:14px;text-align:center}
+.stats div{background:var(--bg);border-radius:10px;padding:10px 4px}
+.stats b{display:block;font-size:1.4rem}
+.stats span{font-size:.75rem;color:var(--muted)}
+.logwrap{max-height:40vh;overflow:auto}
+.log{width:100%;border-collapse:collapse;margin-top:12px;font-size:.88rem}
+.log td{padding:5px 4px;border-bottom:1px solid var(--line)}
+.log td:nth-child(n+2){text-align:right}
+.mark-ok{color:var(--ok);font-weight:900} .mark-ng{color:var(--ng);font-weight:900}
+.row{display:flex;gap:10px} .row .btn{flex:1}
+@media (prefers-reduced-motion:reduce){.new,.belt,.line.danger{animation:none}.toast{transition:none}}
+
+/* home */
+.games{display:grid;gap:12px}
+.game{display:grid;grid-template-columns:88px 1fr;gap:4px 14px;align-items:center;text-align:left;
+  background:var(--panel);border:2px solid var(--line);border-radius:16px;padding:14px 16px}
+.game:hover{border-color:var(--crate)}
+.game .art{grid-row:span 3;height:76px;display:flex;align-items:flex-end;justify-content:center;gap:4px;
+  background:var(--steel);border-radius:12px;padding:8px;box-sizing:border-box}
+.game strong{font-family:var(--display);font-weight:400;font-size:1.25rem}
+.game small{color:var(--muted);line-height:1.6;font-weight:500}
+.game .art .stack{width:16px}
+.game .art .tray{width:58px;align-self:center}
+.back{background:none;color:var(--muted);font-size:.85rem;padding:4px 0;align-self:flex-start}
+
+/* tray game: washer outlet + waiting line */
+.washer{display:flex;gap:8px;align-items:stretch;background:var(--steel);border-radius:12px;padding:8px}
+.wbox{flex:none;width:62px;border-radius:8px;background:var(--belt);color:#fff;font-size:.68rem;font-weight:900;
+  display:flex;flex-direction:column;justify-content:space-between;padding:6px;box-sizing:border-box;letter-spacing:.08em}
+.wbox .next{height:4px;background:rgba(255,255,255,.18);border-radius:2px;overflow:hidden}
+.wbox .next div{height:100%;width:0;background:var(--accent)}
+.lane{flex:1;min-width:0;display:flex;flex-direction:column;gap:6px}
+.queue{display:flex;justify-content:flex-end;align-items:flex-end;gap:5px;height:52px;padding:0 8px 4px;box-sizing:border-box;border-radius:6px;overflow:hidden;
+  background:repeating-linear-gradient(90deg,var(--belt) 0 14px,var(--belt-line) 14px 16px);background-size:16px 100%;animation:belt .5s linear infinite}
+.lane .gauge{position:relative}
+.qstack{width:26px;flex:none;border-radius:2px;background:repeating-linear-gradient(0deg,var(--tray) 0 1px,var(--tray-edge) 1px 1.5px);box-shadow:0 0 0 1px var(--tray-edge)}
+.qtxt{display:flex;justify-content:space-between;font-size:.7rem;font-weight:900;color:var(--muted)}
+
+.tray{position:relative;border-radius:10px;background:var(--tray);aspect-ratio:4/3;max-width:100%;overflow:hidden;
+  box-shadow:inset 0 0 0 4px var(--tray-edge),0 2px 0 rgba(0,0,0,.25)}
+.tray.mini{width:30px;flex:none;border-radius:4px;box-shadow:inset 0 0 0 2px var(--tray-edge)}
+.tray.big{width:min(64%,240px);border-radius:16px;box-shadow:inset 0 0 0 8px var(--tray-edge),0 5px 0 rgba(0,0,0,.2)}
+.tray.big::before{content:"";position:absolute;inset:15px;border-radius:9px;border:2px solid var(--tray-edge);opacity:.55}
+.stain{position:absolute;background:var(--c);border-radius:52% 48% 60% 40%/45% 55% 45% 55%;transform:translate(-50%,-50%)}
+.drop{position:absolute;border-radius:50%;transform:translate(-50%,-50%);
+  background:radial-gradient(circle at 35% 30%,rgba(255,255,255,.95) 0 18%,rgba(255,255,255,.3) 40%,rgba(110,150,170,.28) 68%,transparent 72%)}
+.inspect{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:22px 12px 14px;display:grid;place-items:center;min-height:150px;position:relative}
+#front{width:100%;display:flex;justify-content:center}
+.inspect{cursor:pointer;touch-action:manipulation;transition:transform .05s}
+.inspect:active{transform:scale(.99)}
+.inspect .hint{position:absolute;right:12px;top:6px;font-size:.7rem;color:var(--crate);font-weight:900}
+.inspect .lbl{position:absolute;left:12px;top:6px;font-size:.7rem;color:var(--muted);font-weight:900}
+.waitmsg{color:var(--muted);font-size:.85rem;border:2px dashed var(--line);border-radius:12px;padding:30px 16px;text-align:center}
+.pop{animation:pop .14s ease-out}
+@keyframes pop{from{transform:translateX(-18px) scale(.9);opacity:.4}}
+
+.carts{display:grid;grid-template-columns:2fr 1fr;gap:8px;flex:1}
+.wagon,.bin{border-radius:14px;padding:8px 10px;display:flex;flex-direction:column;gap:4px;min-height:118px;box-sizing:border-box}
+.wagon{background:var(--crate);box-shadow:inset 0 -6px 0 var(--crate-dark)}
+.wagon .label{color:#fff;font-weight:900;font-size:.8rem}
+.bin{background:var(--panel);border:2px dashed var(--line)}
+.bin .label{color:var(--muted);font-weight:900;font-size:.8rem}
+.tstack{margin-top:auto;align-self:center;width:72%;max-width:150px;border-radius:3px;transition:height .1s;
+  background:repeating-linear-gradient(0deg,var(--tray) 0 2px,var(--tray-edge) 2px 3px);box-shadow:0 0 0 1px var(--tray-edge)}
+.tstack.solid{background:linear-gradient(90deg,var(--tray-edge),var(--tray) 14% 86%,var(--tray-edge))}
+.bin .tstack{width:64%}
+.bump{animation:bump .18s}
+@keyframes bump{50%{transform:scale(1.04)}}
+
+.tc{grid-template-columns:1fr 1fr}
+.tc .btn{padding:12px 0}
+.pop.back{animation:popb .14s ease-out}
+@keyframes popb{from{transform:translateX(18px) scale(.9);opacity:.4}}
+.tray.isout{opacity:.6}
+.binitems{display:flex;flex-wrap:wrap;gap:3px;margin-top:auto;align-content:flex-end}
+.bin .tray.mini{width:24px}
+@keyframes stampin{from{transform:translate(-50%,-50%) rotate(-12deg) scale(1.8);opacity:0}}
+#front{flex-direction:column;align-items:center;gap:8px}
+.undo{background:var(--panel);border:2px solid var(--line);border-radius:999px;padding:5px 14px;font-size:.8rem;color:var(--muted)}
+.stamp{animation:stampin .15s ease-out;position:absolute;left:50%;top:50%;transform:translate(-50%,-50%) rotate(-12deg);font-family:var(--display);font-size:1.6rem;
+  color:var(--ng);border:3px solid var(--ng);border-radius:8px;padding:2px 12px;background:var(--panel);opacity:.95}
+.btn.out{background:var(--panel);color:var(--ng);border-color:var(--ng);box-shadow:0 4px 0 var(--ng);font-size:1.25rem}
+.btn.in{background:var(--fg);color:var(--bg);border-color:var(--fg);box-shadow:0 4px 0 var(--muted);font-size:1.25rem}
+.btn.out:active:not(:disabled){box-shadow:0 1px 0 var(--ng)}
+@media (prefers-reduced-motion:reduce){.queue,.pop,.bump{animation:none}}
+</style>
+</head>
+<body>
+
+<div class="wrap" id="app"></div>
+<div class="toast" id="toast"></div>
+
+<script>
+const CAP=180, MAXMISS=3;
+const ITEMS={
+  p:{name:"皿",unit:"枚",per:1,cls:"plate",stack:"stack",keys:"A/S/D"},
+  b:{name:"食器",unit:"枚",per:2,cls:"bowl",stack:"stack b",keys:"J/K/L"}  // 1人2枚
+};
+const MODES={
+  p:{name:"皿",items:["p"]},
+  b:{name:"食器",items:["b"]},
+  pb:{name:"皿＋食器",items:["p","b"]}
+};
+const LEVELS={
+  easy:{name:"かんたん",head:"人数どおり入れる",desc:"欠席・実習生はなし。在籍人数ぶん入れます。",showNeed:true,adjust:false,messy:false,interval:8,min:4},
+  mid:{name:"ふつう",head:"欠席・実習生で増減",desc:"在籍から欠席を引き、教育実習生を足す（−2〜＋2人）。",showNeed:false,adjust:true,messy:false,interval:6.5,min:3.4},
+  hard:{name:"むずかしい",head:"速いコンベア＋バラバラ",desc:"ふつうの計算に加えて、コンベアがさらに速く、かごの中もバラバラに積まれます。",showNeed:false,adjust:true,messy:true,interval:5.2,min:2.8}
+};
+const TWO_SLOW=1.8; // 2種類のときは各コンベアの間隔をこの倍率に
+const app=document.getElementById('app'), toastEl=document.getElementById('toast');
+let S=null, mode='p';
+const store={get(k){try{return JSON.parse(localStorage.getItem(k))}catch(e){return null}},
+  set(k,v){try{localStorage.setItem(k,JSON.stringify(v))}catch(e){}}};
+const rnd=(a,b)=>Math.floor(Math.random()*(b-a+1))+a;
+const icon=k=>`<span class="${ITEMS[k].cls}"></span>`;
+try{const m=store.get('sara-mode');if(MODES[m])mode=m}catch(e){}
+
+function batchSize(){const r=Math.random();return r<.65?30:r<.88?29:28}
+
+function startScreen(){
+  stopAll();
+  const best=store.get('sara-best3')||{};
+  app.innerHTML=`
+    <button class="back" id="back">‹ ゲームをえらぶ</button>
+    <h1>給食<span>食器</span>数え</h1>
+    <ul class="rules">
+      <li>コンベアから<b>だいたい30個ずつ</b>流れてきて、手元にたまります。人が数えて並べているので、28や29のこともあります。</li>
+      <li>配膳票を見て、かごに入れて「かごを出す」。<b>皿は1人1枚、食器は1人2枚</b>。</li>
+      <li>手元に<b>180</b>たまると<b>パンク</b>でゲームオーバー。</li>
+      <li>数をまちがえると1ミス。<b>3ミス</b>でもゲームオーバー。</li>
+      <li>かごの数は表示されません。目で見て数えよう。</li>
+    </ul>
+    <div class="lead">入れるもの</div>
+    <div class="seg" role="group" aria-label="入れるもの">
+      ${Object.entries(MODES).map(([k,M])=>`<button data-mode="${k}" aria-pressed="${k===mode}">
+        <span class="ico">${M.items.map(icon).join('')}</span>${M.name}</button>`).join('')}
+    </div>
+    <div class="lead">レベル</div>
+    <div class="levels">
+      ${Object.entries(LEVELS).map(([k,L])=>`
+        <button class="lv ${k}" data-lv="${k}"><b>${L.name}</b><strong>${L.head}</strong>
+        <small>${L.desc}${best[mode+'-'+k]?`<br><span class="best">ベスト ${best[mode+'-'+k]}クラス</span>`:''}</small></button>`).join('')}
+    </div>`;
+  document.getElementById('back').onclick=home;
+  app.querySelectorAll('[data-mode]').forEach(b=>b.onclick=()=>{mode=b.dataset.mode;store.set('sara-mode',mode);startScreen()});
+  app.querySelectorAll('[data-lv]').forEach(b=>b.onclick=()=>startGame(b.dataset.lv));
+}
+
+function startGame(lv){
+  const L=LEVELS[lv], items=MODES[mode].items, iv=L.interval*(items.length>1?TWO_SLOW:1), now=performance.now();
+  S={lv,mode,items,done:0,miss:0,streak:0,score:0,log:[],t0:now,lock:false,over:false,interval:iv,min:L.min*(items.length>1?TWO_SLOW:1),
+     it:{}};
+  items.forEach((k,i)=>S.it[k]={stacks:[batchSize(),batchSize()],count:0,crate:[],f:1/ITEMS[k].per,nextAt:now+iv*1000/ITEMS[k].per*(i?0.6:1)});
+  newOrder(); renderPlay(); loop();
+}
+
+function newOrder(){
+  const L=LEVELS[S.lv];
+  let cls; do{cls=`${rnd(1,6)}年${rnd(1,4)}組`}while(cls===S.order?.cls);
+  const roster=rnd(22,36), absent=L.adjust?rnd(0,2):0, intern=L.adjust&&rnd(0,2)===0?rnd(1,2):0;
+  S.order={cls,roster,absent,intern,need:roster-absent+intern};
+  S.items.forEach(k=>{S.it[k].count=0;S.it[k].crate=[]});
+  S.orderT0=performance.now();
+}
+
+function renderPlay(){
+  const L=LEVELS[S.lv], o=S.order, two=S.items.length>1;
+  app.innerHTML=`
+    <div class="hud"><span>${MODES[S.mode].name}・${L.name}</span><div class="pills">
+      <span class="pill">完了 <em class="num">${S.done}</em></span>
+      <span class="pill"><em class="num">${S.score}</em>点</span>
+      <span class="pill miss">ミス <i>${'✕'.repeat(S.miss)}</i><em>${'・'.repeat(MAXMISS-S.miss)}</em></span></div></div>
+    <div class="lines ${two?'two':''}">
+      ${S.items.map(k=>`<div class="line" id="line-${k}">
+        <div class="belt"><span class="lbl">${ITEMS[k].name}コンベア</span><div class="incoming" id="inc-${k}"><div class="${ITEMS[k].stack}" style="height:24px"></div></div></div>
+        <div class="pilebox" id="pile-${k}"></div>
+        <div class="gauge" id="gauge-${k}"><div></div></div></div>`).join('')}
+    </div>
+    <div class="slip"><div class="cls">${o.cls}</div><table class="num">
+      <tr><td>在籍</td><td>${o.roster}人</td></tr>
+      ${L.adjust?`<tr><td>欠席</td><td class="minus">${o.absent?'−'+o.absent:'0'}人</td></tr>
+      <tr><td>教育実習生</td><td class="plus">${o.intern?'＋'+o.intern:'0'}人</td></tr>`:''}
+    </table></div>
+    <div class="crate ${two?'two':''}">
+      ${S.items.map(k=>`<div class="compart"><div class="label">${ITEMS[k].name}</div><div class="items ${k} ${L.messy?'messy':''}" id="crate-${k}"></div></div>`).join('')}
+    </div>
+    <div class="controls ${two?'two':''}">
+      ${S.items.map(k=>`<div class="grp ${k}">
+        ${two?`<div class="cap">${icon(k)}${ITEMS[k].name}</div>`:''}
+        <button class="btn take" data-k="${k}" data-n="3">＋3<small>3つずつ</small></button>
+        <button class="btn" data-k="${k}" data-n="1">＋1<small>1つ</small></button>
+        <button class="btn" data-k="${k}" data-n="-1">−1<small>もどす</small></button></div>`).join('')}
+      <button class="btn go gofull" id="go">かごを出す</button>
+    </div>`;
+  app.querySelectorAll('[data-k]').forEach(b=>b.onclick=()=>take(b.dataset.k,+b.dataset.n));
+  document.getElementById('go').onclick=submit;
+  S.items.forEach(k=>{drawCrate(k);drawPile(k)});
+}
+
+const supply=k=>S.it[k].stacks.reduce((a,b)=>a+b,0);
+function take(k,n){
+  if(!S||S.lock||S.over||!S.it[k])return;
+  const I=S.it[k];
+  if(n>0){ n=Math.min(n,supply(k)); if(!n)return flash(`手元に${ITEMS[k].name}がありません`); }
+  else if(!I.count)return;
+  if(I.count+n>45*ITEMS[k].per)return;
+  if(n>0){let r=n;while(r>0){const t=Math.min(r,I.stacks[0]);I.stacks[0]-=t;r-=t;if(!I.stacks[0])I.stacks.shift()}
+    for(let i=0;i<n;i++)I.crate.push({dx:rnd(-6,6),dy:rnd(-6,6),r:rnd(-20,20),o:rnd(0,99),fresh:true})}
+  else {if(I.stacks.length)I.stacks[0]++;else I.stacks.push(1); I.crate.pop()}
+  I.count+=n;
+  drawCrate(k); drawPile(k);
+}
+
+function drawCrate(k){
+  const box=document.getElementById('crate-'+k); if(!box)return;
+  const messy=LEVELS[S.lv].messy, c=ITEMS[k].cls;
+  box.innerHTML=S.it[k].crate.map(p=>`<div class="${c}${p.fresh?' new':''}" style="--dx:${p.dx}px;--dy:${p.dy}px;--r:${p.r}deg${messy?';order:'+p.o:''}"></div>`).join('');
+  S.it[k].crate.forEach(p=>p.fresh=false);
+}
+function drawPile(k){
+  const pile=document.getElementById('pile-'+k); if(!pile)return;
+  let h=`<span class="lbl">手元の${ITEMS[k].name}</span>`;
+  S.it[k].stacks.forEach(c=>h+=`<div class="${ITEMS[k].stack}" style="height:${Math.max(2,c*2)}px"></div>`);
+  pile.innerHTML=h;
+  const sup=supply(k), r=sup/CAP, g=document.getElementById('gauge-'+k);
+  g.firstElementChild.style.width=Math.min(100,r*100)+'%';
+  g.className='gauge'+(r>=.8?' danger':r>=.55?' warn':'');
+  document.getElementById('line-'+k).classList.toggle('danger',r>=.8);
+  app.querySelectorAll(`[data-k="${k}"]`).forEach(b=>{if(+b.dataset.n>0)b.disabled=sup===0});
+}
+
+function loop(){
+  if(!S||S.over)return;
+  const now=performance.now();
+  if(!S.lock){
+    for(const k of S.items){
+      const I=S.it[k], left=I.nextAt-now, prog=Math.max(0,1-left/(S.interval*I.f*1000));
+      const inc=document.getElementById('inc-'+k);
+      if(inc)inc.style.transform=`translateX(${prog*(inc.parentNode.clientWidth-34)}px)`;
+      if(left<=0){
+        I.stacks.push(batchSize()); I.nextAt=now+S.interval*I.f*1000; drawPile(k);
+        if(supply(k)>=CAP)return gameOver(`${ITEMS[k].name}がパンク！`);
+      }
+    }
+  }
+  S.raf=requestAnimationFrame(loop);
+}
+
+function submit(){
+  if(!S||S.lock||S.over)return;
+  const o=S.order, sec=(performance.now()-S.orderT0)/1000;
+  const res=S.items.map(k=>({k,put:S.it[k].count,need:o.need*ITEMS[k].per,d:S.it[k].count-o.need*ITEMS[k].per}));
+  const ok=res.every(r=>r.d===0);
+  S.log.push({cls:o.cls,need:o.need,res,ok,sec});
+  if(ok){
+    S.streak++; S.done++;
+    const pts=(100+Math.max(0,Math.round(50-sec*4/S.items.length)))*S.items.length+(S.streak>=3?30:0); S.score+=pts;
+    toast(`<span class="big">ぴったり！</span>＋${pts}点${S.streak>=3?`（${S.streak}連続）`:''}`,'ok');
+    S.interval=Math.max(S.min,S.interval*0.96);
+  }else{
+    S.streak=0; S.miss++;
+    res.forEach(r=>{if(r.d>0){const st=S.it[r.k].stacks;if(st.length)st[0]+=r.d;else st.push(r.d)}});
+    const msg=res.filter(r=>r.d!==0).map(r=>`${ITEMS[r.k].name}が${r.d<0?(-r.d)+ITEMS[r.k].unit+'足りない':r.d+ITEMS[r.k].unit+'多い'}`).join('、');
+    toast(`<span class="big">ミス！</span>${msg}<br>正解は${res.map(r=>ITEMS[r.k].name+r.need+ITEMS[r.k].unit).join('・')}`,'ng',1500);
+  }
+  S.lock=true; const lockStart=performance.now();
+  setTimeout(()=>{
+    if(!S||S.over)return;
+    const paused=performance.now()-lockStart;
+    S.items.forEach(k=>S.it[k].nextAt+=paused); // 判定中はコンベア停止
+    S.lock=false;
+    if(S.miss>=MAXMISS)return gameOver('3ミス！');
+    for(const k of S.items)if(supply(k)>=CAP)return gameOver(`${ITEMS[k].name}がパンク！`);
+    newOrder(); renderPlay();
+  },ok?600:1500);
+}
+
+function toast(html,cls,ms){
+  toastEl.className='toast '+cls+' show'; toastEl.innerHTML=html;
+  clearTimeout(toast.t); toast.t=setTimeout(()=>toastEl.className='toast '+cls,ms||(cls==='ok'?550:1200));
+}
+function flash(t){toast(`<span class="big" style="font-size:1.1rem">${t}</span>`,'ng',700)}
+
+function gameOver(reason){
+  S.over=true; cancelAnimationFrame(S.raf);
+  const total=(performance.now()-S.t0)/1000, key=S.mode+'-'+S.lv;
+  const best=store.get('sara-best3')||{}; const isBest=S.done>0&&(!best[key]||S.done>best[key]);
+  if(isBest){best[key]=S.done;store.set('sara-best3',best)}
+  const rank=S.done>=30?'給食マスター':S.done>=20?'配膳の達人':S.done>=12?'一人前':S.done>=5?'見習い':'もう一回！';
+  app.innerHTML=`
+    <h1>給食<span>食器</span>数え</h1>
+    <div class="card">
+      <div class="sub">${MODES[S.mode].name}・${LEVELS[S.lv].name}</div>
+      <div class="over">${reason}</div>
+      <div class="rank">ランク：${rank}</div>
+      ${isBest?'<div class="best">ベスト更新！</div>':''}
+      <div class="stats num"><div><b>${S.done}</b><span>クラス完了</span></div>
+        <div><b>${S.score}</b><span>点</span></div>
+        <div><b>${Math.floor(total)}</b><span>秒もった</span></div></div>
+      <div class="logwrap"><table class="log num">${S.log.slice().reverse().map(r=>`<tr><td>${r.cls}</td>
+        <td>${r.res.map(x=>(S.items.length>1?ITEMS[x.k].name:'')+x.put+'/'+x.need).join(' ')}</td><td>${r.sec.toFixed(1)}秒</td>
+        <td class="${r.ok?'mark-ok':'mark-ng'}">${r.ok?'◯':'✕'}</td></tr>`).join('')}</table></div>
+    </div>
+    <div class="row"><button class="btn go" id="again">もう一回</button><button class="btn" id="menu">メニュー</button></div>`;
+  const lv=S.lv;
+  document.getElementById('again').onclick=()=>startGame(lv);
+  document.getElementById('menu').onclick=startScreen;
+}
+
+document.addEventListener('keydown',e=>{
+  if(!S||S.over)return;
+  const one=S.items[0], key=e.key.toLowerCase();
+  const map={a:['p',3],s:['p',1],d:['p',-1],j:['b',3],k:['b',1],l:['b',-1]};
+  if(e.code==='Space'){e.preventDefault();take(one,1)}
+  else if(e.key==='3')take(one,3);
+  else if(e.key==='Backspace'){e.preventDefault();take(one,-1)}
+  else if(e.key==='Enter'){e.preventDefault();submit()}
+  else if(map[key]&&S.it[map[key][0]])take(...map[key]);
+});
+
+/* ===================== お盆数え ===================== */
+const QCAP=90; // 洗浄機の出口にたまれる枚数。これを超えると詰まってゲームオーバー
+const BATCH=30; // 洗浄機から1回に出てくる枚数
+const TLEVELS={
+  easy:{name:"かんたん",head:"人数どおり・よごれ大きめ",desc:"在籍人数ぶんセット。よごれは大きくて見つけやすい。手元の束は1枚ずつの線が見えます。",
+    adjust:false,dirt:.12,stain:"big",decoy:false,solid:false,interval:13.3,min:8},
+  mid:{name:"ふつう",head:"欠席・実習生で増減",desc:"在籍から欠席を引き、教育実習生を足す。よごれは小さめ。手元の束の線は見えません。",
+    adjust:true,dirt:.16,stain:"mid",decoy:false,solid:true,interval:10.7,min:6.3},
+  hard:{name:"むずかしい",head:"小さなよごれ＋水滴",desc:"ふつうに加えて、よごれがさらに小さく薄い。水滴がついたきれいなお盆もまざります。",
+    adjust:true,dirt:.2,stain:"small",decoy:true,solid:true,interval:8.7,min:5}
+};
+let T=null;
+
+function stopAll(){
+  if(S&&S.raf)cancelAnimationFrame(S.raf);
+  if(T&&T.raf)cancelAnimationFrame(T.raf);
+  S=null; T=null;
+}
+
+function home(){
+  stopAll();
+  const b1=store.get('sara-best3')||{}, b2=store.get('obon-best')||{};
+  const top=o=>Math.max(0,...Object.values(o).map(Number).filter(n=>n>0));
+  const t1=top(b1), t2=top(b2);
+  app.innerHTML=`
+    <h1>給食<span>しごと</span>ゲーム</h1>
+    <p class="sub">実務の練習もかねた数えゲームです。あそぶゲームをえらんでください。</p>
+    <div class="games">
+      <button class="game" data-game="shokki">
+        <span class="art"><span class="stack" style="height:40px"></span><span class="stack" style="height:54px"></span><span class="stack b" style="height:46px"></span></span>
+        <strong>食器数え</strong>
+        <small>コンベアから流れてくる皿・食器を、配膳票の人数ぶんかごに入れる。</small>
+        ${t1?`<span class="best">ベスト ${t1}クラス</span>`:''}</button>
+      <button class="game" data-game="obon">
+        <span class="art"><span class="tray"><i class="stain" style="left:62%;top:40%;width:11px;height:9px;--c:var(--stain1)"></i></span></span>
+        <strong>お盆数え</strong>
+        <small>洗浄機から出てくるお盆を1枚ずつめくって数え、よごれたお盆は省く。</small>
+        ${t2?`<span class="best">ベスト ${t2}クラス</span>`:''}</button>
+    </div>`;
+  app.querySelector('[data-game="shokki"]').onclick=startScreen;
+  app.querySelector('[data-game="obon"]').onclick=trayStart;
+}
+
+function makeOrder(adjust,prev){
+  let cls; do{cls=`${rnd(1,6)}年${rnd(1,4)}組`}while(cls===prev);
+  const roster=rnd(22,36), absent=adjust?rnd(0,2):0, intern=adjust&&rnd(0,2)===0?rnd(1,2):0;
+  return {cls,roster,absent,intern,need:roster-absent+intern};
+}
+
+function trayStart(){
+  stopAll();
+  const best=store.get('obon-best')||{};
+  app.innerHTML=`
+    <button class="back" id="back">‹ ゲームをえらぶ</button>
+    <h1>給食<span>お盆</span>数え</h1>
+    <ul class="rules">
+      <li>洗浄機からお盆が<b>30枚ずつ</b>まとめて出てきます。</li>
+      <li>出口のいちばん上のお盆を見て、きれいなら<b>お盆をタップ</b>して束に重ねます（ここで1枚）。よごれがあったら「<b>省く</b>」。</li>
+      <li>本のように「<b>戻る</b>」で1枚前に戻れます。入れてしまったよごれも、戻って省けばOK。</li>
+      <li>人数ぶん手に取ったら「<b>セット完了</b>」で、省いていないお盆をまとめてワゴンへ。お盆は<b>1人1枚</b>。</li>
+      <li>枚数ちがい・よごれ混入は1ミス。<b>3ミス</b>でゲームオーバー。</li>
+      <li>出口に<b>${QCAP}枚</b>をこえてたまると、洗浄機が詰まってゲームオーバー。</li>
+      <li>数は表示されません。省きながら頭の中で数えよう。</li>
+    </ul>
+    <div class="lead">レベル</div>
+    <div class="levels">
+      ${Object.entries(TLEVELS).map(([k,L])=>`
+        <button class="lv ${k}" data-tlv="${k}"><b>${L.name}</b><strong>${L.head}</strong>
+        <small>${L.desc}${best[k]?`<br><span class="best">ベスト ${best[k]}クラス</span>`:''}</small></button>`).join('')}
+    </div>`;
+  document.getElementById('back').onclick=home;
+  app.querySelectorAll('[data-tlv]').forEach(b=>b.onclick=()=>trayGame(b.dataset.tlv));
+}
+
+function makeStains(kind){
+  const cfg={big:[2,3,15,24,.9],mid:[1,2,8,13,.75],small:[1,1,5,8,.5]}[kind];
+  const n=rnd(cfg[0],cfg[1]), out=[];
+  for(let i=0;i<n;i++){const s=rnd(cfg[2],cfg[3]);
+    out.push({x:rnd(14,86),y:rnd(16,82),w:s,h:Math.round(s*(.7+Math.random()*.5)),o:cfg[4],c:`var(--stain${rnd(1,3)})`})}
+  return out;
+}
+function makeDrops(){const out=[];for(let i=rnd(2,4);i>0;i--){const s=rnd(6,11);out.push({x:rnd(14,86),y:rnd(16,82),s})}return out}
+function newTray(dirty){
+  const L=TLEVELS[T.lv];
+  return {dirty,out:false,stains:dirty?makeStains(L.stain):[],drops:!dirty&&L.decoy&&Math.random()<.3?makeDrops():[]};
+}
+function trayHTML(t){
+  return t.stains.map(s=>`<i class="stain" style="left:${s.x}%;top:${s.y}%;width:${s.w}px;height:${s.h}px;opacity:${s.o};--c:${s.c}"></i>`).join('')
+    +t.drops.map(d=>`<i class="drop" style="left:${d.x}%;top:${d.y}%;width:${d.s}px;height:${d.s}px"></i>`).join('');
+}
+
+function trayGame(lv){
+  stopAll();
+  const L=TLEVELS[lv], now=performance.now();
+  T={lv,done:0,miss:0,score:0,streak:0,log:[],t0:now,queue:[],hand:[],c:0,
+     interval:L.interval,min:L.min,nextAt:now+L.interval*1000,lock:false,over:false,order:null,bid:0};
+  addBatch();
+  tOrder(); tRender(); tLoop();
+}
+// 30枚の束に、よごれは0枚（多い）・1枚・2枚（まれ）
+function dirtCount(){const r=Math.random();return r<.55?0:r<.88?1:2}
+function addBatch(){
+  T.bid++; const n=dirtCount(), pos=new Set();
+  while(pos.size<n)pos.add(rnd(0,BATCH-1));
+  for(let i=0;i<BATCH;i++)T.queue.push({...newTray(pos.has(i)),b:T.bid});
+}
+function tOrder(){
+  T.order=makeOrder(TLEVELS[T.lv].adjust,T.order?.cls);
+  T.hand=[]; T.c=0; T.orderT0=performance.now();
+}
+// 見ているお盆＝c番目。数に入るのは「めくって通り過ぎた」hand[0..c-1]だけ。
+// 見ているお盆とその先（戻ったぶん）は、まだ出口に乗っている扱い
+const taken=()=>T.hand.slice(0,T.c);
+const waiting=()=>T.queue.length+(T.hand.length-T.c);
+const current=()=>T.c<T.hand.length?T.hand[T.c]:(T.queue[0]||null);
+
+function tRender(){
+  const L=TLEVELS[T.lv], o=T.order;
+  app.innerHTML=`
+    <div class="hud"><span>お盆・${L.name}</span><div class="pills">
+      <span class="pill">完了 <em class="num">${T.done}</em></span>
+      <span class="pill"><em class="num">${T.score}</em>点</span>
+      <span class="pill miss">ミス <i>${'✕'.repeat(T.miss)}</i><em>${'・'.repeat(MAXMISS-T.miss)}</em></span></div></div>
+    <div class="washer" id="washer">
+      <div class="wbox">洗浄機<div class="next"><div id="next"></div></div></div>
+      <div class="lane"><div class="queue" id="queue"></div>
+        <div class="qtxt"><span>出口のお盆</span><span>詰まりまで</span></div>
+        <div class="gauge" id="qgauge"><div></div></div></div>
+    </div>
+    <div class="inspect" id="inspect" role="button" tabindex="0" aria-label="お盆をめくる"><span class="lbl">いちばん上のお盆（よごれをチェック）</span><span class="hint">タップでめくる ▶</span><div id="front"></div></div>
+    <div class="slip"><div class="cls">${o.cls}</div><table class="num">
+      <tr><td>在籍</td><td>${o.roster}人</td></tr>
+      ${L.adjust?`<tr><td>欠席</td><td class="minus">${o.absent?'−'+o.absent:'0'}人</td></tr>
+      <tr><td>教育実習生</td><td class="plus">${o.intern?'＋'+o.intern:'0'}人</td></tr>`:''}
+    </table></div>
+    <div class="carts">
+      <div class="wagon" id="wagon"><div class="label">手元の束（${o.cls}）</div><div class="tstack ${L.solid?'solid':''}" id="wstack"></div></div>
+      <div class="bin" id="bin"><div class="label">省いたお盆</div><div class="binitems" id="bitems"></div></div>
+    </div>
+    <div class="controls tc">
+      <button class="btn" id="t-prev">◀ 戻る<small>1枚前へ</small></button>
+      <button class="btn out" id="t-out">省く<small>よごれ</small></button>
+      <button class="btn go gofull" id="t-go">セット完了</button>
+    </div>`;
+  document.getElementById('t-prev').onclick=()=>tAct('prev');
+  document.getElementById('t-out').onclick=()=>tAct('out');
+  document.getElementById('inspect').onclick=()=>tAct('next');
+  document.getElementById('t-go').onclick=tSubmit;
+  tDraw(false);
+}
+
+function tDraw(anim){tDrawFront(anim); tDrawQueue(); tDrawCarts()}
+function tDrawFront(anim){
+  const f=document.getElementById('front'); if(!f)return;
+  const t=current();
+  f.innerHTML=t?`<div class="tray big ${anim?'pop'+(anim==='back'?' back':''):''} ${t.out?'isout':''}">${trayHTML(t)}${t.out?'<span class="stamp">省く</span>':''}</div>${t.out?'<button class="undo" id="undo-out">省くのをやめる</button>':''}`
+    :`<div class="waitmsg">次のお盆が出てくるのを待っています</div>`;
+  const ob=document.getElementById('t-out');
+  ob.disabled=!t||t.out;
+  ob.innerHTML=t&&t.out?'省いた<small>このお盆は省き済み</small>':'省く<small>よごれ</small>';
+  const un=document.getElementById('undo-out');
+  if(un)un.onclick=e=>{e.stopPropagation();if(T.busy)return;t.out=false;bump('wagon');tDraw(false)};
+  document.getElementById('t-prev').disabled=T.c<=0;
+}
+function tDrawQueue(){
+  const q=document.getElementById('queue'); if(!q)return;
+  // 戻ったぶん（手元より先のお盆）は出口のいちばん手前に乗っている
+  const ahead=T.hand.length-T.c, g0={};
+  T.queue.forEach(t=>g0[t.b]=(g0[t.b]||0)+1);
+  const bars=Object.keys(g0).sort((a,b)=>b-a).map(b=>g0[b]);
+  if(ahead>0)bars.push(ahead);
+  q.innerHTML=bars.map(n=>`<span class="qstack" style="height:${Math.max(2,n*1.4)}px"></span>`).join('');
+  const r=waiting()/QCAP, g=document.getElementById('qgauge');
+  g.firstElementChild.style.width=Math.min(100,r*100)+'%';
+  g.className='gauge'+(r>=.8?' danger':r>=.55?' warn':'');
+  document.getElementById('washer').classList.toggle('danger',r>=.8);
+}
+function tDrawCarts(){
+  const w=document.getElementById('wstack'), b=document.getElementById('bitems'); if(!w)return;
+  const tk=taken(), ins=tk.filter(t=>!t.out).length, outs=T.hand.slice(0,T.c+1).filter(t=>t.out).length;
+  w.style.height=Math.min(ins,48)*3+'px';
+  b.innerHTML='<span class="tray mini"></span>'.repeat(outs);
+}
+function bump(id){const el=document.getElementById(id);if(!el)return;el.classList.remove('bump');void el.offsetWidth;el.classList.add('bump')}
+
+function tAct(kind){
+  if(!T||T.lock||T.over||T.busy)return;
+  if(kind==='prev'){
+    if(T.c<=0)return;
+    T.c--; tDraw('back'); return;
+  }
+  const t=current();
+  if(!t)return flash('お盆がまだ出てきていません');
+  if(T.c===T.hand.length){ if(T.hand.length>=60)return; T.hand.push(T.queue.shift()); } // 出口から手に取る
+  if(kind==='out'){
+    if(t.out)return; // すでに省いたお盆は何もしない（押し直しで取り消されないように）
+    t.out=true; bump('bin'); tDraw(false);
+    // 「省く」の印を少し見せてから次の1枚へ
+    T.busy=true;
+    setTimeout(()=>{if(!T)return;T.busy=false;if(!T.over&&!T.lock&&T.hand[T.c]===t){T.c++;tDraw('next')}},350);
+    return;
+  }
+  // next：今のお盆を束に重ねて、次の1枚を見る
+  T.c++; if(!t.out)bump('wagon'); tDraw('next');
+}
+
+function tLoop(){
+  if(!T||T.over)return;
+  const now=performance.now();
+  if(!T.lock){
+    const iv=T.interval*1000, left=T.nextAt-now, nx=document.getElementById('next');
+    if(nx)nx.style.width=Math.min(100,Math.max(0,(1-left/iv)*100))+'%';
+    if(left<=0){
+      addBatch(); T.nextAt=now+iv;
+      tDraw(false);
+      if(waiting()>QCAP)return tOver('洗浄機が詰まった！');
+    }
+  }
+  T.raf=requestAnimationFrame(tLoop);
+}
+
+function tSubmit(){
+  if(!T||T.lock||T.over)return;
+  const o=T.order, tk=taken(), set=tk.filter(t=>!t.out), count=set.length;
+  const dirtyIn=set.filter(t=>t.dirty).length, caught=tk.filter(t=>t.out&&t.dirty).length, wasted=tk.filter(t=>t.out&&!t.dirty).length;
+  const d=count-o.need, sec=(performance.now()-T.orderT0)/1000, ok=d===0&&dirtyIn===0;
+  // 戻ったぶん（まだ手に取っていないお盆）は出口に戻す
+  T.queue.unshift(...T.hand.slice(T.c).map(t=>({...t,out:false})));
+  T.log.push({cls:o.cls,need:o.need,count,dirtyIn,wasted,ok,sec});
+  if(ok){
+    T.streak++; T.done++;
+    const pts=Math.max(20,100+caught*5-wasted*10+(T.streak>=3?30:0)); T.score+=pts;
+    const notes=[caught?`よごれ発見 ${caught}枚`:'',wasted?`きれいなのを省いた ${wasted}枚`:''].filter(Boolean).join('・');
+    toast(`<span class="big">ぴったり！</span>＋${pts}点${T.streak>=3?`（${T.streak}連続）`:''}${notes?`<br><small>${notes}</small>`:''}`,'ok',900);
+    T.interval=Math.max(T.min,T.interval*0.96);
+  }else{
+    T.streak=0; T.miss++;
+    const msg=[d<0?`お盆が${-d}枚足りない`:d>0?`お盆が${d}枚多い`:'',dirtyIn?`よごれたお盆が${dirtyIn}枚まざっている`:''].filter(Boolean).join('<br>');
+    toast(`<span class="big">ミス！</span>${msg}<br><small>入れたのは${count}枚・正解は${o.need}枚</small>`,'ng',1700);
+  }
+  T.lock=true; const lockStart=performance.now();
+  setTimeout(()=>{
+    if(!T||T.over)return;
+    T.nextAt+=performance.now()-lockStart; // 判定中は洗浄機を止める
+    T.lock=false;
+    if(T.miss>=MAXMISS)return tOver('3ミス！');
+    tOrder(); tRender();
+  },ok?900:1700);
+}
+
+function tOver(reason){
+  T.over=true; cancelAnimationFrame(T.raf);
+  const total=(performance.now()-T.t0)/1000;
+  const best=store.get('obon-best')||{}; const isBest=T.done>0&&(!best[T.lv]||T.done>best[T.lv]);
+  if(isBest){best[T.lv]=T.done;store.set('obon-best',best)}
+  const rank=T.done>=15?'お盆マスター':T.done>=10?'配膳の達人':T.done>=6?'一人前':T.done>=3?'見習い':'もう一回！';
+  app.innerHTML=`
+    <h1>給食<span>お盆</span>数え</h1>
+    <div class="card">
+      <div class="sub">お盆・${TLEVELS[T.lv].name}</div>
+      <div class="over">${reason}</div>
+      <div class="rank">ランク：${rank}</div>
+      ${isBest?'<div class="best">ベスト更新！</div>':''}
+      <div class="stats num"><div><b>${T.done}</b><span>クラス完了</span></div>
+        <div><b>${T.score}</b><span>点</span></div>
+        <div><b>${Math.floor(total)}</b><span>秒もった</span></div></div>
+      <div class="logwrap"><table class="log num">${T.log.slice().reverse().map(r=>`<tr><td>${r.cls}</td>
+        <td>${r.count}/${r.need}枚</td><td>${r.dirtyIn?`<span class="mark-ng">よごれ${r.dirtyIn}</span>`:''}</td><td>${r.sec.toFixed(0)}秒</td>
+        <td class="${r.ok?'mark-ok':'mark-ng'}">${r.ok?'◯':'✕'}</td></tr>`).join('')}</table></div>
+    </div>
+    <div class="row"><button class="btn go" id="again">もう一回</button><button class="btn" id="menu">メニュー</button></div>`;
+  const lv=T.lv;
+  document.getElementById('again').onclick=()=>trayGame(lv);
+  document.getElementById('menu').onclick=trayStart;
+}
+
+document.addEventListener('keydown',e=>{
+  if(!T||T.over)return;
+  const k=e.key.toLowerCase();
+  if(k==='f'||e.key==='ArrowDown'){e.preventDefault();tAct('out')}
+  else if(k==='j'||e.key==='ArrowRight'||e.code==='Space'){e.preventDefault();tAct('next')}
+  else if(e.key==='ArrowLeft'||e.key==='Backspace'){e.preventDefault();tAct('prev')}
+  else if(e.key==='Enter'){e.preventDefault();tSubmit()}
+});
+
+home();
+</script>
+</body>
+</html>
